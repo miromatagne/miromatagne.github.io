@@ -91,6 +91,9 @@ function resolveMove() {
   }
 }
 
+/**
+ * Setup GUI
+ */
 function setupGUI() {
   effectControl = {
     color1: colours[0],

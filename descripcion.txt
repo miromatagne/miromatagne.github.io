@@ -1,0 +1,4 @@
+Pienso hacer un juego : un Cubo de Rubik.
+Se puede hacer rotaciones del cubo entero utilizando OrbitControls, y además se puede hacer rotaciones de cada lado del cubo utilizando el ratón.
+También hay un menú donde se puede escoger los colores de los 6 lados.
+También habrá una opción para hacer muevos aleatorios, y un botón para resolver el cubo de Rubik.

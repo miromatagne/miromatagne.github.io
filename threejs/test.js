@@ -1,160 +1,529 @@
-/**
-  @file  test.js
-  @brief Ejemplo Three.js: Cubo RGB con textura
-
-  Cubo con color por vertice y mapa de uvs usando la clase Geometry.
-  La textura es una unica imagen en forma de cubo desplegado en cruz horizontal.
-  Cada cara se textura segun mapa uv en la textura.
-  En sentido antihorario las caras son:
-    Delante:   7,0,3,4
-    Derecha:   0,1,2,3
-    Detras:    1,6,5,2
-    Izquierda: 6,7,4,5
-    Arriba:    4,3,2,5
-    Abajo:     7,6,1,0 
-
-  @author rvivo@upv.es
-*/
-
-var renderer, scene, camera, cubo;
-var cameraControls;
-var angulo = -0.01;
+var renderer, scene, camera, projector;
+var cameraControls, effectControl;
+var allCubes = [],
+  rotationGroup = [];
+var clickFace;
+var mouseDownCube, mouseUpCube;
+var pivot;
+var colours = [0x009b48, 0xffffff, 0xb71234, 0xffd500, 0x0046ad, 0xff5800];
+// var colours = [0x000000, 0x0000ff, 0xffffff, 0xffffff, 0xffffff, 0x000000];
+var moveHistory = [];
+var isMoving = false;
+var randomIntervalId, resolveIntervalId;
+var nbRandMoves = 0;
+var lado = 3.0;
+var speed = 500;
+var lightHolder;
 
 init();
-loadCubo(1.0);
+loadScene();
+setupGUI();
 render();
 
-function init()
-{
+/**
+ * Funcion de inicializacion de motor, escena y camara
+ */
+function init() {
+  // Motor de render
   renderer = new THREE.WebGLRenderer();
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  renderer.setClearColor( new THREE.Color(0xFFFFFF) );
-  document.getElementById('container').appendChild( renderer.domElement );
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(new THREE.Color(0x000000));
+  document.getElementById("container").appendChild(renderer.domElement);
 
+  // Escena
   scene = new THREE.Scene();
 
+  // Camara
   var aspectRatio = window.innerWidth / window.innerHeight;
-  camera = new THREE.PerspectiveCamera( 50, aspectRatio , 0.1, 100 );
-  camera.position.set( 1, 1.5, 2 );
+  camera = new THREE.PerspectiveCamera(50, aspectRatio, 0.1, 100);
+  camera.position.set(-20, 20, 30);
 
-  cameraControls = new THREE.OrbitControls( camera, renderer.domElement );
-  cameraControls.target.set( 0, 0, 0 );
+  cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+  cameraControls.target.set(0, 0, 0);
+  cameraControls.enableZoom = false;
 
-  window.addEventListener('resize', updateAspectRatio );
+  const axesHelper = new THREE.AxesHelper(15);
+  scene.add(axesHelper);
+  pivot = new THREE.Object3D();
+  window.addEventListener("resize", updateAspectRatio);
+  //renderer.shadowMap.enabled = true;
+  //renderer.shadowMap.soft = true;
 }
 
-function loadCubo(lado)
-{
-  // Instancia el objeto Geometry
-	var malla = new THREE.Geometry();
-  // Construye la lista de coordenadas y colores por vertice (8)
-  var semilado = lado/2.0;
-  var coordenadas = [    
-                 semilado,-semilado, semilado,  // 0
-                 semilado,-semilado,-semilado,  // 1
-                 semilado, semilado,-semilado,  // 2
-                 semilado, semilado, semilado,  // 3
-                -semilado, semilado, semilado,  // 4
-                -semilado, semilado,-semilado,  // 5
-                -semilado,-semilado,-semilado,  // 6
-                -semilado,-semilado, semilado   // 7 
-                ];
-  var colores =     [ 
-                0xFF0000,   // 0
-                0xFF00FF,   // 1
-                0xFFFFFF,   // 2
-                0xFFFF00,   // 3
-                0x00FF00,   // 4
-                0x00FFFF,   // 5
-                0x0000FF,   // 6
-                0x000000    // 7
-                 ];
-  // Indica como enlazar los vertices para formar triangulos (12)
-  var indices = [
-                7,0,3, 7,3,4, // Front
-                0,1,2, 0,2,3, // Right 
-                1,6,5, 1,5,2, // Back
-                6,7,4, 6,4,5, // Left
-                4,3,2, 4,2,5, // Top
-                0,7,6, 0,6,1  // Bottom
-                   ];
-  var normales = [
-                0,0,1, 0,0,1,   // Front
-                1,0,0, 1,0,0,   // Right
-                0,0,-1, 0,0,-1, // Back 
-                -1,0,0, -1,0,0, // Left
-                0,1,0, 0,1,0,   // Top 
-                0,-1,0, 0,-1,0  // Bottom
-                ];
-  var uvs = [  new THREE.Vector2( 1/4,1/3 ), new THREE.Vector2( 2/4,1/3 ), new THREE.Vector2( 2/4,2/3 ) , // 7,0,3
-               new THREE.Vector2( 1/4,1/3 ), new THREE.Vector2( 2/4,2/3 ), new THREE.Vector2( 1/4,2/3 ) , // 7,3,4
-               new THREE.Vector2( 2/4,1/3 ), new THREE.Vector2( 3/4,1/3 ), new THREE.Vector2( 3/4,2/3 ) , // 0,1,2
-               new THREE.Vector2( 2/4,1/3 ), new THREE.Vector2( 3/4,2/3 ), new THREE.Vector2( 2/4,2/3 ) , // 0,2,3
-               new THREE.Vector2( 3/4,1/3 ), new THREE.Vector2( 4/4,1/3 ), new THREE.Vector2( 4/4,2/3 ) , // 1,6,5
-               new THREE.Vector2( 3/4,1/3 ), new THREE.Vector2( 4/4,2/3 ), new THREE.Vector2( 3/4,2/3 ) , // 1,5,2
-               new THREE.Vector2( 0/4,1/3 ), new THREE.Vector2( 1/4,1/3 ), new THREE.Vector2( 1/4,2/3 ) , // 6,7,4
-               new THREE.Vector2( 0/4,1/3 ), new THREE.Vector2( 1/4,2/3 ), new THREE.Vector2( 0/4,2/3 ) , // 6,4,5
-               new THREE.Vector2( 1/4,2/3 ), new THREE.Vector2( 2/4,2/3 ), new THREE.Vector2( 2/4,3/3 ) , // 4,3,2
-               new THREE.Vector2( 1/4,2/3 ), new THREE.Vector2( 2/4,3/3 ), new THREE.Vector2( 1/4,3/3 ) , // 4,2,5
-               new THREE.Vector2( 2/4,1/3 ), new THREE.Vector2( 1/4,1/3 ), new THREE.Vector2( 1/4,0/3 ) , // 0,7,6
-               new THREE.Vector2( 2/4,1/3 ), new THREE.Vector2( 1/4,0/3 ), new THREE.Vector2( 2/4,0/3 ) , // 0,6,1
-            ];
+function mixCube() {
+  console.log("Mix");
+  randomIntervalId = setInterval(randomMove, 2 * speed);
+}
 
+function randomMove() {
+  console.log(nbRandMoves);
+  if (nbRandMoves == 9) {
+    clearInterval(randomIntervalId);
+    nbRandMoves = 0;
+  } else {
+    nbRandMoves++;
+  }
+  let rotationAxes = ["x", "y", "z"];
+  let randomRotationAxis = rotationAxes[Math.floor(Math.random() * 3)];
+  let randomCube = allCubes[Math.floor(Math.random() * 12)];
+  let randomCubePositions = {
+    x: randomCube.position.x,
+    y: randomCube.position.y,
+    z: randomCube.position.z,
+  };
+  makeMove(randomRotationAxis, randomCubePositions);
+}
 
-  // Construye vertices y los inserta en la malla
-  for(var i=0; i<coordenadas.length; i+=3) {
-    var vertice = new THREE.Vector3( coordenadas[i], coordenadas[i+1], coordenadas[i+2] );
-    malla.vertices.push( vertice );
+function resolveCube() {
+  console.log("Resolve cube");
+  resolveIntervalId = setInterval(resolveMove, 2 * speed);
+}
+
+function resolveMove() {
+  if (moveHistory.length == 0) {
+    clearInterval(resolveIntervalId);
+  } else {
+    var lastMove = moveHistory.pop();
+    makeMove(
+      lastMove.rotationAxis,
+      (startCube = lastMove.mouseDownCube),
+      false,
+      false,
+      -1
+    );
+  }
+}
+
+function setupGUI() {
+  effectControl = {
+    color1: colours[0],
+    color2: colours[1],
+    color3: colours[2],
+    color4: colours[3],
+    color5: colours[4],
+    color6: colours[5],
+    mix: function () {
+      mixCube();
+    },
+    resolve: function () {
+      resolveCube();
+    },
+    speed: 5,
+  };
+
+  var gui = new dat.GUI();
+  var folder = gui.addFolder("Acciones");
+  folder.addColor(effectControl, "color1").name("Color 1");
+  folder.addColor(effectControl, "color2").name("Color 2");
+  folder.addColor(effectControl, "color3").name("Color 3");
+  folder.addColor(effectControl, "color4").name("Color 4");
+  folder.addColor(effectControl, "color5").name("Color 5");
+  folder.addColor(effectControl, "color6").name("Color 6");
+  folder.add(effectControl, "mix").name("Mezclar");
+  folder.add(effectControl, "resolve").name("Resolver");
+  folder.add(effectControl, "speed", 1, 10, 1).name("Velocidad");
+  folder.open();
+}
+
+/**
+ * Devuelve la orientación de la cara del cubo de Rubik donde el jugador
+ * ha hecho un click
+ * @param {Object} point
+ */
+function getClickFace(point) {
+  if (point.x > 4.5 || point.x < -4.5) {
+    clickFace = "x";
+  } else if (point.y > 4.5 || point.y < -4.5) {
+    clickFace = "y";
+  } else if (point.z > 4.5 || point.z < -4.5) {
+    clickFace = "z";
+  }
+  console.log("Face clicked: ", clickFace);
+}
+
+var cubeSize = 3,
+  spacing = 0.5;
+
+var dimensions = 3;
+
+var increment = cubeSize + spacing,
+  maxExtent = (cubeSize * dimensions + spacing * (dimensions - 1)) / 2;
+
+/**
+ * Crea un cubo con 6 caras. Esta función estará llamaa 27 veces para crear
+ * cada cubo del cubo de Rubik.
+ * @param {Number} x : posición x del cubo
+ * @param {Number} y : posición y del cubo
+ * @param {Number} z : posición z del cubo
+ */
+function crearCubo(x, y, z) {
+  geometry = new THREE.CubeGeometry(3, 3, 3);
+
+  var loaderCubo = new THREE.TextureLoader();
+  var texCubo = loaderCubo.load("images/wall.jpg");
+
+  material = new THREE.MeshPhongMaterial({
+    vertexColors: THREE.FaceColors,
+    wireframe: false,
+    map: texCubo,
+  });
+
+  for (var i = 0; i < 12; i = i + 2) {
+    geometry.faces[i].color.setHex(colours[i / 2]);
+    geometry.faces[i + 1].color.setHex(colours[i / 2]);
   }
 
-  // Construye caras y las inserta en la malla
-  for(var i=0; i<indices.length; i+=3){
-    // Formar la cara
-    var triangulo = new THREE.Face3( indices[i], indices[i+1], indices[i+2] );
-    // Indicar la normal por vertice
-    triangulo.normal = new THREE.Vector3( normales[i], normales[i+1], normales[i+2] );
-    // Indicar el color por vertice
-    for(var j=0; j<3; j++){
-      // Cada vertice de cada triangulo tiene su propio color
-      var color = new THREE.Color( colores[ indices[i+j] ] );
-      triangulo.vertexColors.push( color );
+  mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(x, y, z);
+  mesh.rubikPosition = mesh.position.clone();
+  mesh.castShadow = true;
+  mesh.receiveShadow = false;
+
+  console.log(mesh);
+
+  allCubes.push(mesh);
+  scene.add(mesh);
+}
+
+document.addEventListener("mousedown", function (e) {
+  mouse_x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse_y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  var ray = new THREE.Raycaster();
+  ray.setFromCamera(new THREE.Vector2(mouse_x, mouse_y), camera);
+
+  var intersects = ray.intersectObjects(scene.children, false);
+
+  if (
+    intersects.length > 0 &&
+    intersects[0].object.geometry.type == "BoxGeometry"
+  ) {
+    disableCameraControl();
+    mouseDownCube = intersects[0].object.position;
+    getClickFace(intersects[0].point);
+  }
+  render();
+});
+
+var transitions = {
+  x: { y: "z", z: "y" },
+  y: { x: "z", z: "x" },
+  z: { x: "y", y: "x" },
+};
+
+function getMaxDirection(dragVector) {
+  var maxVal = Math.abs(dragVector.x);
+  var maxDirection = "x";
+  if (Math.abs(dragVector.y) > maxVal) {
+    maxDirection = "y";
+    maxVal = Math.abs(dragVector.y);
+  }
+  if (Math.abs(dragVector.z) > maxVal) {
+    maxDirection = "z";
+    maxVal = Math.abs(dragVector.z);
+  }
+  console.log(maxDirection);
+  return maxDirection;
+}
+
+function setRotationGroup(axis, startCube) {
+  if (startCube) {
+    rotationGroup = [];
+    allCubes.forEach(function (cube) {
+      if (Math.abs(cube.position[axis] - startCube[axis]) < 0.1) {
+        rotationGroup.push(cube);
+      }
+    });
+  }
+  if (rotationGroup.length != 9) {
+    rotationGroup = [];
+  } else {
+    pivot.rotation.set(0, 0, 0);
+    pivot.updateMatrixWorld();
+    scene.add(pivot);
+    for (var i in rotationGroup) {
+      pivot.add(rotationGroup[i]);
     }
-    // Añadir a la lista de caras
-    malla.faces.push( triangulo );
-    // Añadir las coordenadas de textura por vertice de la cara añadida
-    malla.faceVertexUvs[0].push( [ uvs[i] , uvs[i+1], uvs[i+2] ] );
   }
-
-  // Configura un material
-  var textura = new THREE.ImageUtils.loadTexture( 'images/ilovecg.png' );
-  var material = new THREE.MeshBasicMaterial( { vertexColors: THREE.VertexColors, map: textura, side: THREE.DoubleSide } );
-
-  // Construye el objeto grafico 
-  cubo = new THREE.Mesh( malla, material );
-
-	// Añade el objeto grafico a la escena
-	scene.add( cubo );
 }
 
-function updateAspectRatio()
-{
+var transitions = {
+  x: { y: "z", z: "y" },
+  y: { x: "z", z: "x" },
+  z: { x: "y", y: "x" },
+};
+
+function animate(time) {
+  requestAnimationFrame(animate);
+  TWEEN.update(time);
+}
+
+function makeMove(
+  rotationAxis,
+  startCube,
+  face = false,
+  save = true,
+  direction = 0
+) {
+  setRotationGroup(rotationAxis, startCube);
+  var dir = direction;
+  if (dir == 0) {
+    dir = 1;
+    if (face) {
+      if (
+        (face == "z" &&
+          rotationAxis == "x" &&
+          startCube.z > 0 &&
+          startCube.y < 0) ||
+        (face == "z" &&
+          rotationAxis == "x" &&
+          startCube.z < 0 &&
+          startCube.y > 0) ||
+        (face == "z" &&
+          rotationAxis == "y" &&
+          startCube.z > 0 &&
+          startCube.x > 0) ||
+        (face == "z" &&
+          rotationAxis == "y" &&
+          startCube.z < 0 &&
+          startCube.x < 0) ||
+        (face == "y" &&
+          rotationAxis == "x" &&
+          startCube.y > 0 &&
+          startCube.z > 0) ||
+        (face == "y" &&
+          rotationAxis == "x" &&
+          startCube.y < 0 &&
+          startCube.z < 0) ||
+        (face == "y" &&
+          rotationAxis == "z" &&
+          startCube.y > 0 &&
+          startCube.x < 0) ||
+        (face == "y" &&
+          rotationAxis == "z" &&
+          startCube.y < 0 &&
+          startCube.x > 0) ||
+        (face == "x" &&
+          rotationAxis == "y" &&
+          startCube.x > 0 &&
+          startCube.z < 0) ||
+        (face == "x" &&
+          rotationAxis == "y" &&
+          startCube.x < 0 &&
+          startCube.z > 0) ||
+        (face == "x" &&
+          rotationAxis == "z" &&
+          startCube.x < 0 &&
+          startCube.y < 0) ||
+        (face == "x" &&
+          rotationAxis == "z" &&
+          startCube.x > 0 &&
+          startCube.y > 0)
+      ) {
+        dir *= -1;
+      }
+    }
+  }
+  //console.log(dir);
+  moveCube(rotationAxis, dir);
+  if (save) {
+    moveHistory.push({
+      rotationAxis: rotationAxis,
+      mouseDownCube: startCube,
+      direction: dir,
+    });
+  }
+  requestAnimationFrame(animate);
+  render();
+}
+
+function moveCube(rotationAxis, direction) {
+  switch (rotationAxis) {
+    case "x":
+      var tween = new TWEEN.Tween(pivot.rotation)
+        .to({ x: (direction * Math.PI) / 2 }, speed)
+        .start()
+        .onComplete(() => moveComplete("x", direction));
+      break;
+    case "y":
+      var tween = new TWEEN.Tween(pivot.rotation)
+        .to({ y: (direction * Math.PI) / 2 }, speed)
+        .start()
+        .onComplete(() => moveComplete("y", direction));
+      break;
+    case "z":
+      var tween = new TWEEN.Tween(pivot.rotation)
+        .to({ z: (direction * Math.PI) / 2 }, speed)
+        .start()
+        .onComplete(() => moveComplete("z", direction));
+      break;
+  }
+}
+
+document.addEventListener("mouseup", function (e) {
+  enableCameraControl();
+  mouse_x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse_y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  var ray = new THREE.Raycaster();
+  ray.setFromCamera(new THREE.Vector2(mouse_x, mouse_y), camera);
+
+  var intersects = ray.intersectObjects(scene.children, false);
+  console.log(intersects);
+
+  if (
+    intersects.length > 0 &&
+    intersects[0].object.geometry.type == "BoxGeometry"
+  ) {
+    mouseUpCube = intersects[0].object.position;
+    var dragVector = mouseUpCube.clone();
+    dragVector.sub(mouseDownCube);
+    if (dragVector.length() > lado) {
+      var dragVectorDirection = getMaxDirection(dragVector);
+      var rotationAxis = transitions[clickFace][dragVectorDirection];
+      console.log("Rotation axis: ", rotationAxis);
+      makeMove(rotationAxis, mouseDownCube, clickFace);
+      console.log(moveHistory);
+    }
+  }
+  render();
+});
+
+function moveComplete(axis, direction) {
+  isMoving = false;
+  scene.remove(pivot);
+  pivot.updateMatrixWorld();
+  rotationGroup.forEach(function (cube) {
+    cube.updateMatrixWorld();
+    cube.rubikPosition = cube.position.clone();
+    cube.rubikPosition.applyMatrix4(pivot.matrixWorld);
+    cube.position.set(
+      cube.rubikPosition.x,
+      cube.rubikPosition.y,
+      cube.rubikPosition.z
+    );
+    var myAxis = "";
+    if (axis == "x") {
+      myAxis = new THREE.Vector3(1, 0, 0);
+    } else if (axis == "y") {
+      myAxis = new THREE.Vector3(0, 1, 0);
+    } else {
+      myAxis = new THREE.Vector3(0, 0, 1);
+    }
+    cube.rotateOnWorldAxis(myAxis, (direction * Math.PI) / 2);
+    pivot.remove(cube);
+    scene.add(cube);
+  });
+}
+
+function disableCameraControl() {
+  cameraControls.enableRotate = false;
+}
+
+function enableCameraControl() {
+  cameraControls.enableRotate = true;
+}
+
+/**
+ * Crea el cubo de Rubik con 27 pequeños cubos.
+ * @param {Number} lado : lado de los pequeños cubos
+ */
+function loadScene() {
+  var increment = lado + lado * 0.08;
+  var positionOffset = (lado - 1) / 2;
+  for (var i = 0; i < lado; i++) {
+    for (var j = 0; j < lado; j++) {
+      for (var k = 0; k < lado; k++) {
+        var x = (i - positionOffset) * increment,
+          y = (j - positionOffset) * increment,
+          z = (k - positionOffset) * increment;
+
+        crearCubo(x, y, z);
+      }
+    }
+  }
+
+  var texSuelo = new THREE.TextureLoader().load("images/lava.jpg");
+  texSuelo.repeat.set(200, 200);
+  texSuelo.wrapS = texSuelo.wrapT = THREE.MirroredRepeatWrapping;
+
+  var geoSuelo = new THREE.PlaneGeometry(10000, 10000);
+  var matSuelo = new THREE.MeshLambertMaterial({
+    color: "white",
+    wireframe: false,
+    map: texSuelo,
+  });
+  var suelo = new THREE.Mesh(geoSuelo, matSuelo);
+  suelo.rotation.x = -Math.PI / 2;
+  suelo.position.y = -15;
+  suelo.receiveShadow = true;
+
+  var ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+
+  var spotLight = new THREE.DirectionalLight(0xffffff, 0.9, 100);
+  spotLight.position.set(50, 50, 50);
+  // spotLight.target.position.set(0, 0, 0);
+  // spotLight.angle = Math.PI / 7;
+  // spotLight.penumbra = 0.3;
+  spotLight.castShadow = true;
+  // spotLight.shadow.camera.near = 1;
+  // spotLight.shadow.mapSize.width = 512;
+  // spotLight.shadow.mapSize.height = 512;
+
+  // spotLight.shadow.camera.left = -200;
+  // spotLight.shadow.camera.right = 200;
+  // spotLight.shadow.camera.top = 200;
+  // spotLight.shadow.camera.bottom = -200;
+
+  spotLight.shadow.mapSize.width = 5012; // default
+  spotLight.shadow.mapSize.height = 5012; // default
+  spotLight.shadow.camera.near = 0.5; // default
+  spotLight.shadow.camera.far = 700; // default
+
+  //https://discourse.threejs.org/t/solved-fix-light-position-regardless-of-user-controls/1663
+  lightHolder = new THREE.Group();
+  lightHolder.add(spotLight);
+
+  // const helper = new THREE.CameraHelper(spotLight.shadow.camera);
+  // scene.add(helper);
+
+  scene.add(lightHolder);
+  scene.add(suelo);
+  scene.add(ambientLight);
+  //scene.add(spotLight);
+}
+
+function updateAspectRatio() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 }
 
-function update()
-{
-  // Cambios para actualizar la camara segun mvto del raton
+function update() {
   cameraControls.update();
+  colours = [
+    effectControl.color1,
+    effectControl.color2,
+    effectControl.color3,
+    effectControl.color4,
+    effectControl.color5,
+    effectControl.color6,
+  ];
 
-  // Movimiento propio del cubo
-	cubo.rotateOnAxis( new THREE.Vector3(0,1,0), angulo );
+  speed = (11 - effectControl.speed) * 100;
+
+  allCubes.forEach(function (cube) {
+    for (var i = 0; i < 12; i = i + 2) {
+      cube.geometry.faces[i].color.setHex(colours[i / 2]);
+      cube.geometry.faces[i + 1].color.setHex(colours[i / 2]);
+      cube.geometry.colorsNeedUpdate = true;
+    }
+  });
+  lightHolder.quaternion.copy(camera.quaternion);
 }
 
-function render()
-{
-	requestAnimationFrame( render );
-	update();
-	renderer.render( scene, camera );
+function render() {
+  requestAnimationFrame(render);
+  update();
+  renderer.render(scene, camera);
 }

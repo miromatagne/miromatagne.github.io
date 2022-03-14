@@ -86,7 +86,7 @@ function resolveMove() {
       (startCube = lastMove.mouseDownCube),
       false,
       false,
-      -1
+      -1 * lastMove.direction
     );
   }
 }
@@ -106,6 +106,7 @@ function setupGUI() {
       resolveCube();
     },
     speed: 5,
+    sombra: false,
   };
 
   var gui = new dat.GUI();
@@ -119,6 +120,7 @@ function setupGUI() {
   folder.add(effectControl, "mix").name("Mezclar");
   folder.add(effectControl, "resolve").name("Resolver");
   folder.add(effectControl, "speed", 1, 10, 1).name("Velocidad");
+  folder.add(effectControl, "sombra").name("Sombra");
   folder.open();
 }
 
@@ -503,6 +505,13 @@ function update() {
     }
   });
   lightHolder.quaternion.copy(camera.quaternion);
+
+  // if (effectControl.sombra) {
+  //   //console.log("Enabling shadows");
+  //   renderer.shadowMap.enabled = true;
+  // } else {
+  //   renderer.shadowMap.enabled = false;
+  // }
 }
 
 function render() {

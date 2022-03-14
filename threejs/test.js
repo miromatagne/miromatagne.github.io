@@ -6,13 +6,12 @@ var clickFace;
 var mouseDownCube, mouseUpCube;
 var pivot;
 var colours = [0x009b48, 0xffffff, 0xb71234, 0xffd500, 0x0046ad, 0xff5800];
-// var colours = [0x000000, 0x0000ff, 0xffffff, 0xffffff, 0xffffff, 0x000000];
 var moveHistory = [];
-var isMoving = false;
 var randomIntervalId, resolveIntervalId;
 var nbRandMoves = 0;
 var lado = 3.0;
 var speed = 500;
+var spacing = 0.5;
 var lightHolder;
 
 init();
@@ -29,6 +28,7 @@ function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(new THREE.Color(0x000000));
   document.getElementById("container").appendChild(renderer.domElement);
+  document.title = "Cubo de Rubik";
 
   // Escena
   scene = new THREE.Scene();
@@ -42,21 +42,19 @@ function init() {
   cameraControls.target.set(0, 0, 0);
   cameraControls.enableZoom = false;
 
-  const axesHelper = new THREE.AxesHelper(15);
-  scene.add(axesHelper);
+  //const axesHelper = new THREE.AxesHelper(15);
+  //scene.add(axesHelper);
   pivot = new THREE.Object3D();
   window.addEventListener("resize", updateAspectRatio);
-  renderer.shadowMap.enabled = true;
+  //renderer.shadowMap.enabled = true;
   //renderer.shadowMap.soft = true;
 }
 
 function mixCube() {
-  console.log("Mix");
   randomIntervalId = setInterval(randomMove, 2 * speed);
 }
 
 function randomMove() {
-  console.log(nbRandMoves);
   if (nbRandMoves == 9) {
     clearInterval(randomIntervalId);
     nbRandMoves = 0;
@@ -75,7 +73,6 @@ function randomMove() {
 }
 
 function resolveCube() {
-  console.log("Resolve cube");
   resolveIntervalId = setInterval(resolveMove, 2 * speed);
 }
 
@@ -109,6 +106,7 @@ function setupGUI() {
       resolveCube();
     },
     speed: 5,
+    sombras: false,
   };
 
   var gui = new dat.GUI();
@@ -122,6 +120,7 @@ function setupGUI() {
   folder.add(effectControl, "mix").name("Mezclar");
   folder.add(effectControl, "resolve").name("Resolver");
   folder.add(effectControl, "speed", 1, 10, 1).name("Velocidad");
+  folder.add(effectControl, "sombra").name("Sombra");
   folder.open();
 }
 
@@ -140,14 +139,6 @@ function getClickFace(point) {
   }
   console.log("Face clicked: ", clickFace);
 }
-
-var cubeSize = 3,
-  spacing = 0.5;
-
-var dimensions = 3;
-
-var increment = cubeSize + spacing,
-  maxExtent = (cubeSize * dimensions + spacing * (dimensions - 1)) / 2;
 
 /**
  * Crea un cubo con 6 caras. Esta función estará llamaa 27 veces para crear
@@ -178,8 +169,6 @@ function crearCubo(x, y, z) {
   mesh.rubikPosition = mesh.position.clone();
   mesh.castShadow = true;
   mesh.receiveShadow = false;
-
-  console.log(mesh);
 
   allCubes.push(mesh);
   scene.add(mesh);
@@ -222,7 +211,6 @@ function getMaxDirection(dragVector) {
     maxDirection = "z";
     maxVal = Math.abs(dragVector.z);
   }
-  console.log(maxDirection);
   return maxDirection;
 }
 
@@ -324,7 +312,6 @@ function makeMove(
       }
     }
   }
-  //console.log(dir);
   moveCube(rotationAxis, dir);
   if (save) {
     moveHistory.push({
@@ -369,7 +356,6 @@ document.addEventListener("mouseup", function (e) {
   ray.setFromCamera(new THREE.Vector2(mouse_x, mouse_y), camera);
 
   var intersects = ray.intersectObjects(scene.children, false);
-  console.log(intersects);
 
   if (
     intersects.length > 0 &&
@@ -383,7 +369,6 @@ document.addEventListener("mouseup", function (e) {
       var rotationAxis = transitions[clickFace][dragVectorDirection];
       console.log("Rotation axis: ", rotationAxis);
       makeMove(rotationAxis, mouseDownCube, clickFace);
-      console.log(moveHistory);
     }
   }
   render();
@@ -520,6 +505,12 @@ function update() {
     }
   });
   lightHolder.quaternion.copy(camera.quaternion);
+
+  if (effectControl.sombra) {
+    renderer.shadowMap.enabled = true;
+  } else {
+    renderer.shadowMap.enabled = false;
+  }
 }
 
 function render() {

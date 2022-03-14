@@ -46,7 +46,7 @@ function init() {
   scene.add(axesHelper);
   pivot = new THREE.Object3D();
   window.addEventListener("resize", updateAspectRatio);
-  //renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = true;
   //renderer.shadowMap.soft = true;
 }
 

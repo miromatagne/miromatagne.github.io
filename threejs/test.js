@@ -106,7 +106,7 @@ function setupGUI() {
       resolveCube();
     },
     speed: 5,
-    sombras: false,
+    sombra: false,
   };
 
   var gui = new dat.GUI();

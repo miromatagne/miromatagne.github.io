@@ -46,7 +46,7 @@ function init() {
   //scene.add(axesHelper);
   pivot = new THREE.Object3D();
   window.addEventListener("resize", updateAspectRatio);
-  //renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = true;
   //renderer.shadowMap.soft = true;
 }
 
@@ -106,7 +106,6 @@ function setupGUI() {
       resolveCube();
     },
     speed: 5,
-    sombra: false,
   };
 
   var gui = new dat.GUI();
@@ -120,7 +119,6 @@ function setupGUI() {
   folder.add(effectControl, "mix").name("Mezclar");
   folder.add(effectControl, "resolve").name("Resolver");
   folder.add(effectControl, "speed", 1, 10, 1).name("Velocidad");
-  folder.add(effectControl, "sombra").name("Sombra");
   folder.open();
 }
 
@@ -460,8 +458,8 @@ function loadScene() {
   // spotLight.shadow.camera.top = 200;
   // spotLight.shadow.camera.bottom = -200;
 
-  spotLight.shadow.mapSize.width = 5012; // default
-  spotLight.shadow.mapSize.height = 5012; // default
+  spotLight.shadow.mapSize.width = 512; // default
+  spotLight.shadow.mapSize.height = 512; // default
   spotLight.shadow.camera.near = 0.5; // default
   spotLight.shadow.camera.far = 700; // default
 
@@ -505,12 +503,6 @@ function update() {
     }
   });
   lightHolder.quaternion.copy(camera.quaternion);
-
-  if (effectControl.sombra) {
-    renderer.shadowMap.enabled = true;
-  } else {
-    renderer.shadowMap.enabled = false;
-  }
 }
 
 function render() {

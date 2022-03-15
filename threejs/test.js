@@ -107,7 +107,6 @@ function setupGUI() {
       resolveCube();
     },
     speed: 5,
-    sombra: false,
   };
 
   var gui = new dat.GUI();
@@ -121,7 +120,6 @@ function setupGUI() {
   folder.add(effectControl, "mix").name("Mezclar");
   folder.add(effectControl, "resolve").name("Resolver");
   folder.add(effectControl, "speed", 1, 10, 1).name("Velocidad");
-  folder.add(effectControl, "sombra").name("Sombra");
   folder.open();
 }
 

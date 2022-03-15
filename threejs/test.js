@@ -1,18 +1,22 @@
 var renderer, scene, camera, projector;
 var cameraControls, effectControl;
+
 var allCubes = [],
   rotationGroup = [];
 var clickFace;
 var mouseDownCube, mouseUpCube;
+
 var pivot;
-var colours = [0x009b48, 0xffffff, 0xb71234, 0xffd500, 0x0046ad, 0xff5800];
 var moveHistory = [];
 var randomIntervalId, resolveIntervalId;
 var nbRandMoves = 0;
+var lightContainer;
+
 var lado = 3.0;
-var speed = 500;
 var spacing = 0.5;
-var lightHolder;
+var colours = [0x009b48, 0xffffff, 0xb71234, 0xffd500, 0x0046ad, 0xff5800];
+
+var speed = 500;
 
 init();
 loadScene();
@@ -42,12 +46,9 @@ function init() {
   cameraControls.target.set(0, 0, 0);
   cameraControls.enableZoom = false;
 
-  //const axesHelper = new THREE.AxesHelper(15);
-  //scene.add(axesHelper);
   pivot = new THREE.Object3D();
   window.addEventListener("resize", updateAspectRatio);
   renderer.shadowMap.enabled = true;
-  //renderer.shadowMap.soft = true;
 }
 
 function mixCube() {
@@ -447,35 +448,19 @@ function loadScene() {
 
   var spotLight = new THREE.DirectionalLight(0xffffff, 0.9, 100);
   spotLight.position.set(50, 50, 50);
-  // spotLight.target.position.set(0, 0, 0);
-  // spotLight.angle = Math.PI / 7;
-  // spotLight.penumbra = 0.3;
   spotLight.castShadow = true;
-  // spotLight.shadow.camera.near = 1;
-  // spotLight.shadow.mapSize.width = 512;
-  // spotLight.shadow.mapSize.height = 512;
-
-  // spotLight.shadow.camera.left = -200;
-  // spotLight.shadow.camera.right = 200;
-  // spotLight.shadow.camera.top = 200;
-  // spotLight.shadow.camera.bottom = -200;
-
-  spotLight.shadow.mapSize.width = 512; // default
-  spotLight.shadow.mapSize.height = 512; // default
-  spotLight.shadow.camera.near = 0.5; // default
-  spotLight.shadow.camera.far = 700; // default
+  spotLight.shadow.mapSize.width = 512;
+  spotLight.shadow.mapSize.height = 512;
+  spotLight.shadow.camera.near = 0.5;
+  spotLight.shadow.camera.far = 700;
 
   //https://discourse.threejs.org/t/solved-fix-light-position-regardless-of-user-controls/1663
-  lightHolder = new THREE.Group();
-  lightHolder.add(spotLight);
+  lightContainer = new THREE.Group();
+  lightContainer.add(spotLight);
 
-  // const helper = new THREE.CameraHelper(spotLight.shadow.camera);
-  // scene.add(helper);
-
-  scene.add(lightHolder);
+  scene.add(lightContainer);
   scene.add(suelo);
   scene.add(ambientLight);
-  //scene.add(spotLight);
 }
 
 function updateAspectRatio() {
@@ -504,14 +489,7 @@ function update() {
       cube.geometry.colorsNeedUpdate = true;
     }
   });
-  lightHolder.quaternion.copy(camera.quaternion);
-
-  // if (effectControl.sombra) {
-  //   //console.log("Enabling shadows");
-  //   renderer.shadowMap.enabled = true;
-  // } else {
-  //   renderer.shadowMap.enabled = false;
-  // }
+  lightContainer.quaternion.copy(camera.quaternion);
 }
 
 function render() {
